@@ -38,6 +38,8 @@ Refering:
   - 右の[XOR Receiver data]をチェックすると、受信側でストリームのデータを逆加工
   - どちらも加工しない、あるいは加工する場合のみ、正常に右の映像が表示できる
 
+![接続後のXOR切り替え](img/insertable_streams_demo.gif "接続後のXOR切り替え")
+
 - [Disconnect]ボタンをクリックすると通信切断
 - [Stop Video]ボタンをクリックすると、映像取得終了
 
