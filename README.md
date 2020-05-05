@@ -26,7 +26,7 @@ Refering:
 
 ## GitHub Pages で実行
 
-- Chrome m83以上で、ページにアクセス
+- Chrome m83以上で、[webrtc_insertable_demo](https://mganeko.github.io/webrtc_insertable_demo/)ページにアクセス
 - [Start Video]ボタンをクリックし、カメラから映像を取得
   - 左に映像が表示される
   - [use Audio]がチェックされていると、マイクの音声も取得
