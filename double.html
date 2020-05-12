@@ -232,9 +232,15 @@
     }
 
     const transformStream = new TransformStream({
-      transform: encodeFunction,
+      //transform: encodeFunction,
+      transform: dupFunction,
     });
 
+    readableStream
+      .pipeThrough(transformStream)
+      .pipeTo(writableStream);
+
+    /* -- try split ---
     if (sender.track.kind === 'video') {
       const teeStreams = readableStream.tee(); // OK
       teeStreams[0].pipeThrough(transformStream)
@@ -247,6 +253,7 @@
         .pipeThrough(transformStream)
         .pipeTo(writableStream);
     }
+    ---*/
   }
 
   function setupSenderPipe(sender) {
@@ -260,6 +267,7 @@
     const readableStream = senderStreams.readableStream;
     const writableStream = senderStreams.writableStream;
 
+    /*--- try tee --
     if (pipe1VideoSenderReadable) {
       pipe1VideoSenderReadable.pipeTo(writableStream); // invalid
       // 次は、transformerの中で小細工してみる
@@ -267,7 +275,58 @@
     else {
       console.warn('---NO stream to Pipe---');
     }
+    ---*/
+
+    const transformStream = new TransformStream({
+      transform: jackFunction,
+    });
+
+    readableStream
+      .pipeThrough(transformStream)
+      .pipeTo(writableStream);
   }
+
+  let secondController = null;
+  function jackFunction(chunk, controller) {
+    if (!secondController) {
+      secondController = controller;
+    }
+  }
+
+  function dupFunction(chunk, controller) {
+    if (scount++ < MAX_DUMP_COUNT) { // dump the first MAX_DUMP_COUNT packets.
+      dump(chunk, 'send');
+    }
+    else if (chunk.type === 'key') {
+      dump(chunk, 'send');
+    }
+
+
+    // --- new data ----
+    const view = new DataView(chunk.data);
+    const newData = new ArrayBuffer(chunk.data.byteLength + additionalSize);
+    const newView = new DataView(newData);
+    const newData2 = new ArrayBuffer(chunk.data.byteLength + additionalSize);
+    const newView2 = new DataView(newData);
+
+    for (let i = 0; i < chunk.data.byteLength; i++) {
+      // --- just copy ---
+      newView.setInt8(i, view.getInt8(i));
+      newView2.setInt8(i, view.getInt8(i));
+    }
+
+    chunk.data = newData;
+
+    // --- queue new chunk ---
+    controller.enqueue(chunk);
+
+    // --- queue new chunk ---
+    if (secondController) {
+      secondController.enqueue(chunk);
+    }
+  }
+
+  // -----
 
   function setupReceiverTransform(receiver) {
     console.log('receiver kind=%s', receiver.track.kind);
