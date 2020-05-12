@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="videopipe.js"></script>
+  <!-- videopipe.js from webrtc/samples (BSD License)
+    https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/videopipe.js
+  -->
+</head>
+
+<body>
+  <div>
+    WebRTC Insertable Streams (<a
+      href=" https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md">explainer</a>) Trial.<br />
+    Please try with Chrome m83 or later, with #enable-experimental-web-platform-features flag.
+  </div>
+  <br />
+  <input type="checkbox" id="use_audio_check">use Audio</input>
+  <button onclick="startVideo(); startCanvasStream();">Start Video</button>
+  <button onclick="stopVideo(); stopCanvasStream();">Stop Video</button>
+  &nbsp;
+  <button onclick="startPeer()">Connect</button>
+  <button onclick="stopPeer()">Disconnect</button>
+  <br />
+  <div
+    style="display:grid; grid-template-columns: 400px 400px; grid-template-rows: 30px 250px 30px; column-gap: 2px; row-gap: 2px;">
+    <div>Sender</div>
+    <div>Receiver</div>
+    <video id="local_video" width="320" height="240" style="border: solid 1px black;">
+    </video>
+    <video id="recv_video" width="320" height="240" controls="1" style="border: solid 1px black;">
+    </video>
+    <div><input type="checkbox" id="invert_sender_check" onchange="toggleSender()">XOR Sender data</input></div>
+    <div><input type="checkbox" id="invert_receiver_check" onchange="toggleReceiver()">XOR Receiver data</input></div>
+    <canvas id="local_canvas" width="320" height="240" style="border: solid 1px black;">
+    </canvas>
+    <video id="recv_canvas_video" width="320" height="240" controls="1" style="border: solid 1px black;">
+    </video>
+  </div>
+</body>
+<script>
+  //
+  // Refer:
+  //   - https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md
+  //   - https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption
+  //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
+  // 
+
+  let localStream = null;
+  let pipe = null;
+  let pipe2 = null;
+  let invertSender = false;
+  let invertReceiver = false;
+  const localVideo = document.getElementById('local_video');
+  const recvVideo = document.getElementById('recv_video');
+  const localCanvas = document.getElementById('local_canvas');
+  const recvCanvasVideo = document.getElementById('recv_canvas_video');
+  let canvasStream = null;
+
+  function startVideo() {
+    console.log('startVideo()');
+    const useAudio = getUseAudio();
+
+    //const constraints = { video: true, audio: useAudio };
+    //const constraints = { video: { width: 1280, height: 720 }, audio: useAudio };
+    const constraints = { video: { width: 640, height: 480 }, audio: useAudio };
+    console.log('getUserMedia constraints:', constraints);
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        localStream = stream;
+        localVideo.srcObject = stream;
+        localVideo.muted = true;
+        localVideo.play().catch(err => console.error('video play ERROR:', err));
+      })
+      .catch(err => {
+        console.error('getUserMedia ERROR:', err);
+      });
+  }
+
+  let keepAnimation = false;
+  let fillColor = 'rgb(0,0,255)';
+  function startCanvasStream() {
+    // clear canvas
+    const ctx = localCanvas.getContext('2d');
+    ctx.fillStyle = 'rgb(0,0,255)';
+    ctx.fillRect(0, 0, localCanvas.width, localCanvas.height);
+
+    canvasStream = localCanvas.captureStream(10);
+    keepAnimation = true;
+
+    setTimeout(updateCanvas, 1000);
+  }
+
+  function updateCanvas() {
+    const ctx = localCanvas.getContext('2d');
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(0, 0, localCanvas.width, localCanvas.height);
+
+    if (fillColor === 'rgb(0,0,255)') {
+      fillColor = 'rgb(0,255,0)';
+    }
+    else {
+      fillColor = 'rgb(0,0,255)'
+    }
+
+    if (keepAnimation) {
+      setTimeout(updateCanvas, 1000);
+    }
+  }
+
+  function stopCanvasStream() {
+    if (canvasStream) {
+      canvasStream.getTracks().forEach(track => track.stop());
+      canvasStream = null;
+    }
+    keepAnimation = false;
+  }
+
+  function stopVideo() {
+    if (localVideo.srcObject) {
+      localVideo.srcObject.getTracks().forEach(track => track.stop());
+      localVideo.pause();
+      localVideo.srcObject = null;
+    }
+
+    localStream = null;
+  }
+
+  function getUseAudio() {
+    return document.getElementById('use_audio_check').checked;
+  }
+
+  function toggleSender() {
+    invertSender = document.getElementById('invert_sender_check').checked;
+    console.log('invertSender=', invertSender);
+  }
+
+  function toggleReceiver() {
+    invertReceiver = document.getElementById('invert_receiver_check').checked;
+    console.log('invertReceiver=', invertReceiver);
+  }
+
+  // --- connect 2 peers ---
+  function startPeer() {
+    startPipe1();
+    startPipe2();
+  }
+
+  function startPipe1() {
+    const forceSend = true;
+    const forceRecieve = true;
+    pipe = new VideoPipe(localStream, forceSend, forceRecieve, evt => {
+      if (forceRecieve) {
+        setupReceiverTransform(evt.receiver);
+      }
+      if (!recvVideo.srcObject) {
+        recvVideo.srcObject = evt.streams[0];
+        recvVideo.play().catch(err => { console.error('play ERROR', err) });
+      }
+    });
+
+    if (forceSend) {
+      pipe.pc1.getSenders().forEach(setupSenderTransform);
+    }
+
+    resetDumpCount();
+    pipe.negotiate();
+  }
+
+  function startPipe2() {
+    const forceSend = true;
+    const forceRecieve = false;
+    pipe2 = new VideoPipe(canvasStream, forceSend, forceRecieve, evt => {
+      // if (forceRecieve) {
+      //   setupReceiverTransform(evt.receiver);
+      // }
+      if (!recvCanvasVideo.srcObject) {
+        recvCanvasVideo.srcObject = evt.streams[0];
+        recvCanvasVideo.play().catch(err => { console.error('play ERROR', err) });
+      }
+    });
+
+    if (forceSend) {
+      pipe2.pc1.getSenders().forEach(setupSenderPipe);
+    }
+
+    //resetDumpCount();
+    pipe2.negotiate();
+  }
+
+  // --- disconnect 2 peers ---
+  function stopPeer() {
+    stopPipe1();
+    stopPipe2();
+  }
+
+  function stopPipe1() {
+    if (pipe) {
+      pipe.close();
+      pipe = null;
+    }
+
+    recvVideo.pause();
+    recvVideo.srcObject = null;
+  }
+
+  function stopPipe2() {
+    if (pipe2) {
+      pipe2.close();
+      pipe2 = null;
+    }
+
+    recvCanvasVideo.pause();
+    recvCanvasVideo.srcObject = null;
+  }
+
+  // --- check if supports InsertableStreams ---
+  const supportsInsertableStreams =
+    !!RTCRtpSender.prototype.createEncodedVideoStreams;
+  console.log('supportsInsertableStreams=', supportsInsertableStreams);
+
+  let pipe1VideoSenderReadable = null;
+  function setupSenderTransform(sender) {
+    console.log('sender kind=%s', sender.track.kind);
+    const senderStreams = sender.track.kind === 'video' ? sender.createEncodedVideoStreams() : sender.createEncodedAudioStreams();
+    const readableStream = senderStreams.readableStream;
+    const writableStream = senderStreams.writableStream;
+
+    if (sender.track.kind === 'video') {
+      pipe1VideoSenderReadable = readableStream;
+    }
+
+    const transformStream = new TransformStream({
+      transform: encodeFunction,
+    });
+
+    if (sender.track.kind === 'video') {
+      const teeStreams = readableStream.tee(); // OK
+      teeStreams[0].pipeThrough(transformStream)
+        .pipeTo(writableStream);
+
+      pipe1VideoSenderReadable = teeStreams[1];
+    }
+    else {
+      readableStream
+        .pipeThrough(transformStream)
+        .pipeTo(writableStream);
+    }
+  }
+
+  function setupSenderPipe(sender) {
+    console.log('sender kind=%s', sender.track.kind);
+    if (sender.track.kind !== 'video') {
+      console.warn('---NOT video sender---');
+      return;
+    }
+
+    const senderStreams = sender.track.kind === sender.createEncodedVideoStreams();
+    const readableStream = senderStreams.readableStream;
+    const writableStream = senderStreams.writableStream;
+
+    if (pipe1VideoSenderReadable) {
+      pipe1VideoSenderReadable.pipeTo(writableStream); // invalid
+      // 次は、transformerの中で小細工してみる
+    }
+    else {
+      console.warn('---NO stream to Pipe---');
+    }
+  }
+
+  function setupReceiverTransform(receiver) {
+    console.log('receiver kind=%s', receiver.track.kind);
+    const receiverStreams = receiver.track.kind === 'video' ? receiver.createEncodedVideoStreams() : receiver.createEncodedAudioStreams();
+    const readableStream = receiverStreams.readableStream;
+    const writableStream = receiverStreams.writableStream;
+
+    const transformStream = new TransformStream({
+      transform: decodeFunction,
+    });
+    readableStream
+      .pipeThrough(transformStream)
+      .pipeTo(writableStream);
+  }
+
+  // --- encode / decode ---
+  let scount = 0;
+  let rcount = 0;
+  const MAX_DUMP_COUNT = 10;
+  const xorMask = 0xff;
+  const additionalSize = 0;
+  const additionalByte = 0xcc;
+
+  // for VP8
+  // https://tools.ietf.org/html/rfc6386#section-9.1
+  const frameTypeToCryptoOffset = {
+    key: 10,
+    delta: 3,
+    undefined: 1,
+  };
+
+  let lastController = null;
+  function encodeFunction(chunk, controller) {
+    if (scount++ < MAX_DUMP_COUNT) { // dump the first MAX_DUMP_COUNT packets.
+      dump(chunk, 'send');
+    }
+    else if (chunk.type === 'key') {
+      dump(chunk, 'send');
+    }
+
+    if (!lastController) {
+      lastController = controller;
+    }
+    else if (lastController !== controller) {
+      console.warn('different controller'); // not come here, so same controller
+      lastController = controller;
+    }
+
+    // --- new data ----
+    const view = new DataView(chunk.data);
+    const newData = new ArrayBuffer(chunk.data.byteLength + additionalSize);
+    const newView = new DataView(newData);
+    const cryptoOffset = frameTypeToCryptoOffset[chunk.type];
+
+    for (let i = 0; i < chunk.data.byteLength; i++) {
+      // --- copy header --
+      if (i < cryptoOffset) {
+        // just copy
+        newView.setInt8(i, view.getInt8(i));
+        continue;
+      }
+
+      if (invertSender) {
+        // --- invert(XOR) copy ---
+        newView.setInt8(i, view.getInt8(i) ^ xorMask);
+      }
+      else {
+        // --- just copy ---
+        newView.setInt8(i, view.getInt8(i));
+      }
+    }
+
+    // -- additional data --
+    for (let i = 0; i < additionalSize; i++) {
+      newView.setUint8(chunk.data.byteLength + i, additionalByte);
+    }
+    chunk.data = newData;
+
+    // --- queue new chunk ---
+    controller.enqueue(chunk);
+  }
+
+
+  function decodeFunction(chunk, controller) {
+    if (rcount++ < MAX_DUMP_COUNT) { // dump the first MAX_DUMP_COUNT packets.
+      dump(chunk, 'recv');
+    }
+    else if (chunk.type === 'key') {
+      dump(chunk, 'recv');
+    }
+
+    // --- new data ----
+    const view = new DataView(chunk.data);
+    const newData = new ArrayBuffer(chunk.data.byteLength - additionalSize);
+    const newView = new DataView(newData);
+    const cryptoOffset = frameTypeToCryptoOffset[chunk.type];
+
+    for (let i = 0; i < chunk.data.byteLength - additionalSize; i++) {
+      // --- copy header --
+      if (i < cryptoOffset) {
+        // -- just copy --
+        newView.setInt8(i, view.getInt8(i));
+        continue;
+      }
+
+      if (invertReceiver) {
+        // --- invert(XOR) copy ---
+        newView.setInt8(i, view.getInt8(i) ^ xorMask);
+      }
+      else {
+        // --- just copy ---
+        newView.setInt8(i, view.getInt8(i));
+      }
+    }
+    chunk.data = newData;
+
+    // --- queue new chunk ---
+    controller.enqueue(chunk);
+  }
+
+  function resetDumpCount() {
+    scount = 0;
+    rcount = 0;
+  }
+
+  // chunk:
+  //  interface RTCEncodedVideoFrame {
+  //     readonly attribute RTCEncodedVideoFrameType type;
+  //     readonly attribute unsigned long long timestamp;
+  //     attribute ArrayBuffer data;
+  //     readonly attribute ArrayBuffer additionalData;
+  //     readonly attribute unsigned long synchronizationSource;
+  // };
+
+  function dump(chunk, direction, max = 16) {
+    const data = new Uint8Array(chunk.data);
+    let bytes = '';
+    for (let j = 0; j < data.length && j < max; j++) {
+      bytes += (data[j] < 16 ? '0' : '') + data[j].toString(16) + ' ';
+    }
+    console.log(performance.now().toFixed(2), direction, bytes.trim(),
+      'len=' + chunk.data.byteLength,
+      'type=' + (chunk.type || 'audio'),
+      'ts=' + chunk.timestamp,
+      'ssrc=' + chunk.synchronizationSource
+    );
+  }
+</script>
+
+</html>
