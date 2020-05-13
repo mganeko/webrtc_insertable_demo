@@ -227,20 +227,11 @@
     const readableStream = senderStreams.readableStream;
     const writableStream = senderStreams.writableStream;
 
-    if (sender.track.kind === 'video') {
-      pipe1VideoSenderReadable = readableStream;
-    }
-
     const transformStream = new TransformStream({
-      //transform: encodeFunction,
-      transform: dupFunction,
+      transform: encodeFunction,
     });
 
-    readableStream
-      .pipeThrough(transformStream)
-      .pipeTo(writableStream);
-
-    /* -- try split ---
+    // -- try split with tee ---
     if (sender.track.kind === 'video') {
       const teeStreams = readableStream.tee(); // OK
       teeStreams[0].pipeThrough(transformStream)
@@ -253,7 +244,6 @@
         .pipeThrough(transformStream)
         .pipeTo(writableStream);
     }
-    ---*/
   }
 
   function setupSenderPipe(sender) {
@@ -263,27 +253,21 @@
       return;
     }
 
-    const senderStreams = sender.track.kind === sender.createEncodedVideoStreams();
+    const senderStreams = sender.createEncodedVideoStreams();
     const readableStream = senderStreams.readableStream;
     const writableStream = senderStreams.writableStream;
 
-    /*--- try tee --
+    // --- try tee ---
     if (pipe1VideoSenderReadable) {
-      pipe1VideoSenderReadable.pipeTo(writableStream); // invalid
-      // 次は、transformerの中で小細工してみる
+      pipe1VideoSenderReadable.pipeTo(writableStream);
+      //  Failed to execute 'pipeTo' on 'ReadableStream': Cannot pipe a locked stream
+      // tee --> OK, but writeでエラー
+      //  Uncaught (in promise) DOMException: Failed to execute 'write' on 'UnderlyingSinkBase': Empty frame
+      // 次は、transformerの中で小細工してみる??
     }
     else {
       console.warn('---NO stream to Pipe---');
     }
-    ---*/
-
-    const transformStream = new TransformStream({
-      transform: jackFunction,
-    });
-
-    readableStream
-      .pipeThrough(transformStream)
-      .pipeTo(writableStream);
   }
 
   let secondController = null;
