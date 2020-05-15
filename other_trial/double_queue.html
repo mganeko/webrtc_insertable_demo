@@ -2,7 +2,7 @@
 <html>
 
 <head>
-  <script src="videopipe.js"></script>
+  <script src="../videopipe.js"></script>
   <!-- videopipe.js from webrtc/samples (BSD License)
     https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/videopipe.js
   -->
@@ -32,7 +32,7 @@
     </video>
     <div><input type="checkbox" id="invert_sender_check" onchange="toggleSender()">XOR Sender data</input></div>
     <div><input type="checkbox" id="invert_receiver_check" onchange="toggleReceiver()">XOR Receiver data</input></div>
-    <canvas id="local_canvas" width="320" height="240" style="border: solid 1px black;">
+    <canvas id="local_canvas" width="640" height="480" style="border: solid 1px black; width:320px; height:240px;">
     </canvas>
     <video id="recv_canvas_video" width="320" height="240" controls="1" style="border: solid 1px black;">
     </video>
@@ -71,6 +71,9 @@
         localStream = stream;
         localVideo.srcObject = stream;
         localVideo.muted = true;
+        localVideo.onloadedmetadata = function () {
+          console.log('videWidth, videoHeight=', localVideo.videoWidth, localVideo.videoHeight);
+        }
         localVideo.play().catch(err => console.error('video play ERROR:', err));
       })
       .catch(err => {
@@ -370,12 +373,13 @@
 
   function drainFunction(chunk, controller) {
     const queuedChunk = chunkQueue.dequeue();
+    console.log('dequed, queue.size=' + chunkQueue.size())
     if (queuedChunk) {
       chunk.data = queuedChunk.data;
       chunk.additionalData = queuedChunk.additionalData;
       chunk.synchronizationSource = queuedChunk.synchronizationSource;
       chunk.type = queuedChunk.type;
-      chunk.timestamp = queuedChunk.timestamp;
+      //chunk.timestamp = queuedChunk.timestamp;
       controller.enqueue(chunk);
 
       //controller.enqueue(queuedChunk);
