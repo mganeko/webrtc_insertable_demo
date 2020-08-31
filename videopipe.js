@@ -23,12 +23,10 @@
 
 function VideoPipe(stream, forceSend, forceReceive, handler) {
   this.pc1 = new RTCPeerConnection({
-    forceEncodedVideoInsertableStreams: forceSend,
-    forceEncodedAudioInsertableStreams: forceSend,
+    encodedInsertableStreams: forceSend
   });
   this.pc2 = new RTCPeerConnection({
-    forceEncodedVideoInsertableStreams: forceReceive,
-    forceEncodedAudioInsertableStreams: forceReceive,
+    encodedInsertableStreams: forceReceive
   });
 
   stream.getTracks().forEach((track) => this.pc1.addTrack(track, stream));

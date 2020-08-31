@@ -131,12 +131,12 @@
 
   // --- check if supports InsertableStreams ---
   const supportsInsertableStreams =
-    !!RTCRtpSender.prototype.createEncodedVideoStreams;
+    !!RTCRtpSender.prototype.createEncodedStreams;
   console.log('supportsInsertableStreams=', supportsInsertableStreams);
 
   function setupSenderTransform(sender) {
     console.log('sender kind=%s', sender.track.kind);
-    const senderStreams = sender.track.kind === 'video' ? sender.createEncodedVideoStreams() : sender.createEncodedAudioStreams();
+    const senderStreams = sender.createEncodedStreams();
     const readableStream = senderStreams.readableStream;
     const writableStream = senderStreams.writableStream;
 
@@ -150,7 +150,7 @@
 
   function setupReceiverTransform(receiver) {
     console.log('receiver kind=%s', receiver.track.kind);
-    const receiverStreams = receiver.track.kind === 'video' ? receiver.createEncodedVideoStreams() : receiver.createEncodedAudioStreams();
+    const receiverStreams = receiver.createEncodedStreams();
     const readableStream = receiverStreams.readableStream;
     const writableStream = receiverStreams.writableStream;
 
