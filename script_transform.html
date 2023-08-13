@@ -12,9 +12,9 @@
 
 <body>
   <div>
-    WebRTC Insertable Streams (<a
-      href=" https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md">explainer</a>) Trial.<br />
-    Please try with Chrome m83 or later, with #enable-experimental-web-platform-features flag.
+    WebRTC RTCRtpScriptTransforms (<a
+      href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform">draft Spec</a>) Trial.<br />
+    Please try with Safari 16, Firefox 117(beta) or later.
   </div>
   <br />
   <input type="checkbox" id="use_audio_check" >use Audio</input>
@@ -89,11 +89,13 @@
   function toggleSender() {
     invertSender = document.getElementById('invert_sender_check').checked;
     console.log('invertSender=', invertSender);
+    postEncryptFlag();
   }
 
   function toggleReceiver() {
     invertReceiver = document.getElementById('invert_receiver_check').checked;
     console.log('invertReceiver=', invertReceiver);
+    postEncryptFlag();
   }
 
   // --- connect 2 peers ---
@@ -183,6 +185,14 @@
     //   .pipeTo(writableStream);
   }
 
+  // encript on/off
+  function postEncryptFlag() {
+    worker.postMessage({
+      operation: 'setEncript',
+      encriptSender: invertSender,
+      encriptReceiver: invertReceiver,
+    });
+  }
 
   /* =========
   // --- encode / decode ---

@@ -16,6 +16,17 @@ if (self.RTCTransformEvent) {
   };
 }
 
+
+// Handler for messages, including transferable streams.
+onmessage = (event) => {
+  console.log('onMessage: ' + event.data.operation);
+  if (event.data.operation === 'setEncript') {
+    invertSender = event.data.encriptSender;
+    invertReceiver = event.data.encriptReceiver;
+    console.log('onMessage(setEncript) : invertSender=' + invertSender + ', invertReceiver=' + invertReceiver);
+  }
+};
+
 function handleTransform(operation, readable, writable) {
   if (operation === 'encode') {
     console.log('handleTransform: encode');
@@ -47,7 +58,7 @@ function handleTransform(operation, readable, writable) {
   const additionalSize = 0;
   const additionalByte = 0xcc;
 
-  let invertSender = true;
+  let invertSender = false;
   let invertReceiver = false;
 
   // for VP8
@@ -73,9 +84,9 @@ function handleTransform(operation, readable, writable) {
     if (scount++ < MAX_DUMP_COUNT) { // dump the first MAX_DUMP_COUNT packets.
       dump(chunk, 'send');
     }
-    else if (chunk.type === 'key') {
-      dump(chunk, 'send');
-    }
+    // else if (chunk.type === 'key') {
+    //   dump(chunk, 'send');
+    // }
 
     // --- new data ----
     const view = new DataView(chunk.data);
@@ -117,9 +128,9 @@ function handleTransform(operation, readable, writable) {
     if (rcount++ < MAX_DUMP_COUNT) { // dump the first MAX_DUMP_COUNT packets.
       dump(chunk, 'recv');
     }
-    else if (chunk.type === 'key') {
-      dump(chunk, 'recv');
-    }
+    // else if (chunk.type === 'key') {
+    //   dump(chunk, 'recv');
+    // }
 
     // --- new data ----
     const view = new DataView(chunk.data);
