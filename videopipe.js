@@ -52,11 +52,15 @@ VideoPipe.prototype.negotiate = async function () {
   }
 
   const offer = await this.pc1.createOffer();
+  console.log('offer.sdp: ' + offer.sdp);
+
   //await this.pc2.setRemoteDescription({ type: 'offer', sdp: offer.sdp.replace('red/90000', 'green/90000') });
   await this.pc2.setRemoteDescription({ type: 'offer', sdp: offer.sdp });
   await this.pc1.setLocalDescription(offer);
 
   const answer = await this.pc2.createAnswer();
+  console.log('answer.sdp: ' + answer.sdp);
+  
   await this.pc1.setRemoteDescription(answer);
   await this.pc2.setLocalDescription(answer);
 };

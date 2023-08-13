@@ -2,6 +2,10 @@
 // https://github.com/webrtc/samples/blob/gh-pages/src/content/insertable-streams/endtoend-encryption/js/worker.js
 //
 
+// OK: Firefox Nightly 118
+// NG: Safari 16.6
+//    VP8 でない？
+
 'use strict';
 
 // Handler for RTCRtpScriptTransforms.
@@ -43,8 +47,8 @@ function handleTransform(operation, readable, writable) {
   const additionalSize = 0;
   const additionalByte = 0xcc;
 
-  let invertSender = false;
-  let invertReceiver = false;
+  let invertSender = true;
+  let invertReceiver = true;
 
   // for VP8
   // https://tools.ietf.org/html/rfc6386#section-9.1
@@ -53,6 +57,15 @@ function handleTransform(operation, readable, writable) {
     delta: 3,
     undefined: 1,
   };
+
+  // for H264
+  //  https://tools.ietf.org/html/rfc6184#section-5.1
+  const frameTypeToCryptoOffsetH264 = {
+    key: 38, //16,  // 64 OK, 48 OK, 40 OK, 38 OK, 37 NG, 36 NG, 32 NG, 
+    delta: 4, //16, // 32 OK, 16 OK, 8 OK, 4 OK, 3 NG
+    undefined: 1,
+  };
+
 
   function encodeFunction(chunk, controller) {
     if (scount++ < MAX_DUMP_COUNT) { // dump the first MAX_DUMP_COUNT packets.
@@ -66,7 +79,8 @@ function handleTransform(operation, readable, writable) {
     const view = new DataView(chunk.data);
     const newData = new ArrayBuffer(chunk.data.byteLength + additionalSize);
     const newView = new DataView(newData);
-    const cryptoOffset = frameTypeToCryptoOffset[chunk.type];
+    //const cryptoOffset = frameTypeToCryptoOffset[chunk.type];
+    const cryptoOffset = frameTypeToCryptoOffsetH264[chunk.type];
 
     for (let i = 0; i < chunk.data.byteLength; i++) {
       // --- copy header --
@@ -109,7 +123,8 @@ function handleTransform(operation, readable, writable) {
     const view = new DataView(chunk.data);
     const newData = new ArrayBuffer(chunk.data.byteLength - additionalSize);
     const newView = new DataView(newData);
-    const cryptoOffset = frameTypeToCryptoOffset[chunk.type];
+    //const cryptoOffset = frameTypeToCryptoOffset[chunk.type];
+    const cryptoOffset = frameTypeToCryptoOffsetH264[chunk.type];
 
     for (let i = 0; i < chunk.data.byteLength - additionalSize; i++) {
       // --- copy header --
