@@ -145,7 +145,7 @@
     }
     else {
       console.error('ERROR: NOT support RTCRtpScriptTransform');
-      return;
+      throw new Error('NOT support RTCRtpScriptTransform');
     }
 
     // const senderStreams = sender.createEncodedStreams();
@@ -168,7 +168,7 @@
     }
     else {
       console.error('ERROR: NOT support RTCRtpScriptTransform');
-      return;
+      throw new Error('NOT support RTCRtpScriptTransform');
     }
 
     // const receiverStreams = receiver.createEncodedStreams();

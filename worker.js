@@ -48,7 +48,7 @@ function handleTransform(operation, readable, writable) {
   const additionalByte = 0xcc;
 
   let invertSender = true;
-  let invertReceiver = true;
+  let invertReceiver = false;
 
   // for VP8
   // https://tools.ietf.org/html/rfc6386#section-9.1
@@ -60,6 +60,8 @@ function handleTransform(operation, readable, writable) {
 
   // for H264
   //  https://tools.ietf.org/html/rfc6184#section-5.1
+  //  https://tex2e.github.io/rfc-translater/html/rfc6184.html
+  //  but by try and error, the offset is different from the RFC.
   const frameTypeToCryptoOffsetH264 = {
     key: 38, //16,  // 64 OK, 48 OK, 40 OK, 38 OK, 37 NG, 36 NG, 32 NG, 
     delta: 4, //16, // 32 OK, 16 OK, 8 OK, 4 OK, 3 NG
