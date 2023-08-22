@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Sender</title>
+  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2022.1.0/dist/ayame.min.js"></script>
+</head>
+
+<body>
+  <div>
+    WebRTC RTCRtpScriptTransforms (<a
+      href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform">draft Spec</a>) Trial.<br />
+    Please try with Safari 16, Firefox 117(beta) or later.
+  </div>
+  <br />
+  <input type="checkbox" id="use_audio_check" >use Audio</input>
+  <button onclick="startVideo()">Start Video</button>
+  <button onclick="stopVideo()">Stop Video</button>
+  &nbsp;
+  <button onclick="startConn()">Connect</button>
+  <button onclick="stopConn()">Disconnect</button>
+  <br />
+  <div
+    style="display:grid; grid-template-columns: 400px; grid-template-rows: 30px 250px 30px; column-gap: 2px; row-gap: 2px;">
+    <div>Sender</div>
+    <video id="local_video" width="320" height="240" style="border: solid 1px black;">
+    </video>
+    <div><input type="checkbox" id="invert_sender_check" onchange="toggleSender()">XOR Sender data</input></div>
+  </div>
+</body>
+<script>
+  //
+  // Refer:
+  //   - https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md
+  //   - https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption
+  //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
+  // 
+
+  let localStream = null;
+  let pipe = null;
+  let invertSender = false;
+  let invertReceiver = false;
+  const localVideo = document.getElementById('local_video');
+  
+  function startVideo() {
+    console.log('startVideo()');
+    const useAudio = getUseAudio();
+
+    //const constraints = { video: true, audio: useAudio };
+    //const constraints = { video: { width: 1280, height: 720 }, audio: useAudio };
+    const constraints = { video: { width: 640, height: 480 }, audio: useAudio };
+    console.log('getUserMedia constraints:', constraints);
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        localStream = stream;
+        localVideo.srcObject = stream;
+        localVideo.muted = true;
+        localVideo.play().catch(err => console.error('video play ERROR:', err));
+      })
+      .catch(err => {
+        console.error('getUserMedia ERROR:', err);
+      });
+  }
+
+  function stopVideo() {
+    if (localVideo.srcObject) {
+      localVideo.srcObject.getTracks().forEach(track => track.stop());
+      localVideo.pause();
+      localVideo.srcObject = null;
+    }
+
+    localStream = null;
+  }
+
+  function getUseAudio() {
+    return document.getElementById('use_audio_check').checked;
+  }
+
+  function toggleSender() {
+    invertSender = document.getElementById('invert_sender_check').checked;
+    console.log('invertSender=', invertSender);
+    postEncryptFlag();
+  }
+
+  // function toggleReceiver() {
+  //   invertReceiver = document.getElementById('invert_receiver_check').checked;
+  //   console.log('invertReceiver=', invertReceiver);
+  //   postEncryptFlag();
+  // }
+
+
+  // --- check if supports InsertableStreams ---
+  const supportsInsertableStreams =
+    !!RTCRtpSender.prototype.createEncodedStreams;
+  console.log('supportsInsertableStreams=', supportsInsertableStreams);
+  const supportsScriptTransform =
+    !!window.RTCRtpScriptTransform;
+  console.log('supportsScriptTransform=', supportsScriptTransform);
+
+  // --- worker ---
+  const worker = new Worker('./js/worker.js', {name: 'E2EE worker'});
+
+  function setupSenderTransform(sender) {
+    console.log('sender kind=%s', sender.track?.kind);
+    if (window.RTCRtpScriptTransform) {
+      sender.transform = new RTCRtpScriptTransform(worker, {operation: 'encode'});
+      return;
+    }
+    else {
+      console.error('ERROR: NOT support RTCRtpScriptTransform');
+      throw new Error('NOT support RTCRtpScriptTransform');
+    }
+
+    // const senderStreams = sender.createEncodedStreams();
+    // const readableStream = senderStreams.readable; // OLD: readableStream;
+    // const writableStream = senderStreams.writable; // OLD: writableStream;
+
+    // const transformStream = new TransformStream({
+    //   transform: encodeFunction,
+    // });
+    // readableStream
+    //   .pipeThrough(transformStream)
+    //   .pipeTo(writableStream);
+  }
+
+  /*========
+  function setupReceiverTransform(receiver) {
+    console.log('receiver kind=%s', receiver.track?.kind);
+    if (window.RTCRtpScriptTransform) {
+      receiver.transform = new RTCRtpScriptTransform(worker, {operation: 'decode'});
+      return;
+    }
+    else {
+      console.error('ERROR: NOT support RTCRtpScriptTransform');
+      throw new Error('NOT support RTCRtpScriptTransform');
+    }
+
+    // const receiverStreams = receiver.createEncodedStreams();
+    // const readableStream = receiverStreams.readable; // OLD: readableStream;
+    // const writableStream = receiverStreams.writable; // OLD: writableStream;
+
+    // const transformStream = new TransformStream({
+    //   transform: decodeFunction,
+    // });
+    // readableStream
+    //   .pipeThrough(transformStream)
+    //   .pipeTo(writableStream);
+  }
+  =====*/
+
+  // encript on/off
+  function postEncryptFlag() {
+    worker.postMessage({
+      operation: 'setEncript',
+      encriptSender: invertSender,
+      encriptReceiver: invertReceiver,
+    });
+  }
+
+/* ======== for Ayame Labo ======== */
+const conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', 'mg-test-room');
+conn.options.video.direction = 'sendonly';
+//conn.options.audio.direction = 'sendonly';
+const startConn = async () => {
+  await conn.connect(localStream).catch(e => console.log(e));
+  console.log('ayame connected');
+  
+  conn.on('disconnect', (e) => console.log(e));
+
+  conn._pc.getSenders().forEach(setupSenderTransform);
+};
+const stopConn = async () => {
+  if (!conn) return;
+  await conn.disconnect();
+};
+
+</script>
+
+</html>
