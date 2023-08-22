@@ -99,6 +99,15 @@
       receiver.transform = new RTCRtpScriptTransform(worker, {operation: 'decode'});
       return;
     }
+    else if(supportsInsertableStreams) {
+      const receiverStreams = receiver.createEncodedStreams();
+      const {readable, writable} = receiverStreams;
+      worker.postMessage({
+        operation: 'decode',
+        readable,
+        writable,
+      }, [readable, writable]);
+    }
     else {
       console.error('ERROR: NOT support RTCRtpScriptTransform');
       throw new Error('NOT support RTCRtpScriptTransform');
@@ -128,7 +137,8 @@
 /* ======== for Ayame Labo ======== */
 const conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', 'mg-test-room');
 conn.options.video.direction = 'recvonly';
-conn.options.audio.direction = 'recvonly';
+//conn.options.audio.direction = 'recvonly';
+conn._pcConfig.encodedInsertableStreams = true;
 const startConn = async () => {
   await conn.connect(null).catch(e => console.log(e));
   console.log('ayame connected');

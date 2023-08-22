@@ -25,6 +25,10 @@ onmessage = (event) => {
     invertReceiver = event.data.encriptReceiver;
     console.log('onMessage(setEncript) : invertSender=' + invertSender + ', invertReceiver=' + invertReceiver);
   }
+  else if (event.data.operation === 'encode' || event.data.operation === 'decode') {
+    // with createEncodedStreams (Insertable Streams API)
+    handleTransform(event.data.operation, event.data.readable, event.data.writable);
+  }
 };
 
 function handleTransform(operation, readable, writable) {
