@@ -84,12 +84,6 @@
     postEncryptFlag();
   }
 
-  // function toggleReceiver() {
-  //   invertReceiver = document.getElementById('invert_receiver_check').checked;
-  //   console.log('invertReceiver=', invertReceiver);
-  //   postEncryptFlag();
-  // }
-
 
   // --- check if supports InsertableStreams ---
   const supportsInsertableStreams =
@@ -121,43 +115,7 @@
       console.error('ERROR: NOT support RTCRtpScriptTransform');
       throw new Error('NOT support RTCRtpScriptTransform');
     }
-
-    // const senderStreams = sender.createEncodedStreams();
-    // const readableStream = senderStreams.readable; // OLD: readableStream;
-    // const writableStream = senderStreams.writable; // OLD: writableStream;
-
-    // const transformStream = new TransformStream({
-    //   transform: encodeFunction,
-    // });
-    // readableStream
-    //   .pipeThrough(transformStream)
-    //   .pipeTo(writableStream);
   }
-
-  /*========
-  function setupReceiverTransform(receiver) {
-    console.log('receiver kind=%s', receiver.track?.kind);
-    if (window.RTCRtpScriptTransform) {
-      receiver.transform = new RTCRtpScriptTransform(worker, {operation: 'decode'});
-      return;
-    }
-    else {
-      console.error('ERROR: NOT support RTCRtpScriptTransform');
-      throw new Error('NOT support RTCRtpScriptTransform');
-    }
-
-    // const receiverStreams = receiver.createEncodedStreams();
-    // const readableStream = receiverStreams.readable; // OLD: readableStream;
-    // const writableStream = receiverStreams.writable; // OLD: writableStream;
-
-    // const transformStream = new TransformStream({
-    //   transform: decodeFunction,
-    // });
-    // readableStream
-    //   .pipeThrough(transformStream)
-    //   .pipeTo(writableStream);
-  }
-  =====*/
 
   // encript on/off
   function postEncryptFlag() {
@@ -171,7 +129,7 @@
 /* ======== for Ayame Labo ======== */
 const conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', 'mg-test-room');
 conn.options.video.direction = 'sendonly';
-//conn.options.audio.direction = 'sendonly';
+conn.options.audio.direction = 'sendonly';
 conn._pcConfig.encodedInsertableStreams = true;
 const startConn = async () => {
   await conn.connect(localStream).catch(e => console.log(e));

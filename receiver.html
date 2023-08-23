@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8" />
-  <title>Sender</title>
+  <title>Receiver</title>
   <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2022.1.0/dist/ayame.min.js"></script>
 </head>
 
@@ -40,16 +40,6 @@
   //const localVideo = document.getElementById('local_video');
   const recvVideo = document.getElementById('recv_video');
 
-  // function getUseAudio() {
-  //   return document.getElementById('use_audio_check').checked;
-  // }
-
-  // function toggleSender() {
-  //   invertSender = document.getElementById('invert_sender_check').checked;
-  //   console.log('invertSender=', invertSender);
-  //   postEncryptFlag();
-  // }
-
   function toggleReceiver() {
     invertReceiver = document.getElementById('invert_receiver_check').checked;
     console.log('invertReceiver=', invertReceiver);
@@ -67,40 +57,25 @@
 
   // --- worker ---
   const worker = new Worker('./js/worker.js', {name: 'E2EE worker'});
-
-  /*====
-  function setupSenderTransform(sender) {
-    console.log('sender kind=%s', sender.track.kind);
-    if (window.RTCRtpScriptTransform) {
-      sender.transform = new RTCRtpScriptTransform(worker, {operation: 'encode'});
-      return;
-    }
-    else {
-      console.error('ERROR: NOT support RTCRtpScriptTransform');
-      throw new Error('NOT support RTCRtpScriptTransform');
-    }
-
-    // const senderStreams = sender.createEncodedStreams();
-    // const readableStream = senderStreams.readable; // OLD: readableStream;
-    // const writableStream = senderStreams.writable; // OLD: writableStream;
-
-    // const transformStream = new TransformStream({
-    //   transform: encodeFunction,
-    // });
-    // readableStream
-    //   .pipeThrough(transformStream)
-    //   .pipeTo(writableStream);
-  }
-  ====*/
+  let encodedStreams = [];
 
   function setupReceiverTransform(receiver) {
     console.log('receiver kind=%s', receiver.track.kind);
     if (window.RTCRtpScriptTransform) {
+      if (receiver.transform) {
+        console.log('receiver.transform already exists');
+        return;
+      }
       receiver.transform = new RTCRtpScriptTransform(worker, {operation: 'decode'});
       return;
     }
     else if(supportsInsertableStreams) {
+      if (encodedStreams[receiver.track.kind]) {
+        console.log('receiver.transform already exists');
+        return;
+      }
       const receiverStreams = receiver.createEncodedStreams();
+      encodedStreams[receiver.track.kind] = receiverStreams;
       const {readable, writable} = receiverStreams;
       worker.postMessage({
         operation: 'decode',
@@ -112,17 +87,6 @@
       console.error('ERROR: NOT support RTCRtpScriptTransform');
       throw new Error('NOT support RTCRtpScriptTransform');
     }
-
-    // const receiverStreams = receiver.createEncodedStreams();
-    // const readableStream = receiverStreams.readable; // OLD: readableStream;
-    // const writableStream = receiverStreams.writable; // OLD: writableStream;
-
-    // const transformStream = new TransformStream({
-    //   transform: decodeFunction,
-    // });
-    // readableStream
-    //   .pipeThrough(transformStream)
-    //   .pipeTo(writableStream);
   }
 
   // encript on/off
@@ -137,14 +101,18 @@
 /* ======== for Ayame Labo ======== */
 const conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', 'mg-test-room');
 conn.options.video.direction = 'recvonly';
-//conn.options.audio.direction = 'recvonly';
+conn.options.audio.direction = 'recvonly';
 conn._pcConfig.encodedInsertableStreams = true;
 const startConn = async () => {
   await conn.connect(null).catch(e => console.log(e));
   console.log('ayame connected');
   
-  conn.on('disconnect', (e) => console.log(e));
+  conn.on('disconnect', (e) => {
+    console.log(e);
+    encodedStreams = [];
+  });
   conn.on('addstream', (e) => {
+    console.log('addstream', e.stream);
     conn._pc.getReceivers().forEach(setupReceiverTransform);
 
     //  document.querySelector('#remote-video').srcObject = e.stream;
@@ -152,11 +120,15 @@ const startConn = async () => {
       recvVideo.srcObject = e.stream;
       recvVideo.play().catch(err => { console.error('play ERROR', err) });
     }
+    else if (recvVideo.srcObject !== e.stream) {
+      recvVideo.srcObject = e.stream;
+    }
   });
 };
 const stopConn = async () => {
   if (!conn) return;
   await conn.disconnect();
+  encodedStreams = [];
 
   recvVideo.pause();
   recvVideo.srcObject = null;
