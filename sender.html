@@ -15,11 +15,11 @@
   </div>
   <br />
   <input type="checkbox" id="use_audio_check" >use Audio</input>
-  <button onclick="startVideo()">Start Video</button>
-  <button onclick="stopVideo()">Stop Video</button>
+  <button id="start_video_button" onclick="startVideo()">Start Video</button>
+  <button id="stop_video_button" onclick="stopVideo()">Stop Video</button>
   &nbsp;
-  <button onclick="startConn()">Connect</button>
-  <button onclick="stopConn()">Disconnect</button>
+  <button id="connect_button" onclick="startConn()">Connect</button>
+  <button id="disconnect_button" onclick="stopConn()">Disconnect</button>
   <br />
   <div
     style="display:grid; grid-template-columns: 400px; grid-template-rows: 30px 250px 30px; column-gap: 2px; row-gap: 2px;">
@@ -36,9 +36,16 @@
   //   - https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption
   //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
   // 
+  // ToDo
+  //  - [ ] add room id
+  //    - [ ] add room id input
+  //    - [ ] add room id qeury parameter
+  //  - [ ] add signaling key
+  //    - [ ] add signaling key input
+  //    - [ ] add signaling key qeury parameter
 
   let localStream = null;
-  let pipe = null;
+  //let pipe = null;
   let invertSender = false;
   let invertReceiver = false;
   const localVideo = document.getElementById('local_video');
@@ -58,6 +65,7 @@
         localVideo.srcObject = stream;
         localVideo.muted = true;
         localVideo.play().catch(err => console.error('video play ERROR:', err));
+        updateUI();
       })
       .catch(err => {
         console.error('getUserMedia ERROR:', err);
@@ -72,6 +80,7 @@
     }
 
     localStream = null;
+    updateUI();
   }
 
   function getUseAudio() {
@@ -82,6 +91,57 @@
     invertSender = document.getElementById('invert_sender_check').checked;
     console.log('invertSender=', invertSender);
     postEncryptFlag();
+  }
+
+  function updateUI() {
+    if (isConnected()) {
+      disableElement(document.getElementById('start_video_button'));
+      disableElement(document.getElementById('stop_video_button'));
+      disableElement(document.getElementById('use_audio_check'));
+      disableElement(document.getElementById('connect_button'));
+      enableElement(document.getElementById('disconnect_button'));
+    }
+    else {
+      if(isMediaStarted()) {
+        disableElement(document.getElementById('start_video_button'));
+        enableElement(document.getElementById('stop_video_button'));
+        enableElement(document.getElementById('connect_button'));
+        disableElement(document.getElementById('disconnect_button'));
+      }
+      else {
+        enableElement(document.getElementById('start_video_button'));
+        disableElement(document.getElementById('stop_video_button'));
+        enableElement(document.getElementById('use_audio_check'));
+        disableElement(document.getElementById('connect_button'));
+        disableElement(document.getElementById('disconnect_button'));
+      }
+    }
+  }
+
+  function enableElement(element) {
+    element.disabled = false;
+  }
+
+  function disableElement(element) {
+    element.disabled = true;
+  }
+
+  function isConnected() {
+    if (conn?._pc) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  function isMediaStarted() {
+    if (localStream) {
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
 
@@ -132,17 +192,29 @@ conn.options.video.direction = 'sendonly';
 conn.options.audio.direction = 'sendonly';
 conn._pcConfig.encodedInsertableStreams = true;
 const startConn = async () => {
-  await conn.connect(localStream).catch(e => console.log(e));
+  await conn.connect(localStream).catch(e => {
+    console.log(e);
+    return;
+  });
   console.log('ayame connected');
-  
-  conn.on('disconnect', (e) => console.log(e));
+  isAyameConnected = true;
+  updateUI();
 
+  conn.on('disconnect', (e) => {
+    console.log(e);
+    isAyameConnected = false;
+    updateUI();
+  });
   conn._pc.getSenders().forEach(setupSenderTransform);
 };
 const stopConn = async () => {
   if (!conn) return;
   await conn.disconnect();
+  updateUI();
 };
+
+// ==== update UI ====
+updateUI();
 
 </script>
 
