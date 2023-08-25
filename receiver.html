@@ -14,8 +14,8 @@
     Please try with Safari 16, Firefox 117(beta) or later.
   </div>
   <br />
-  <button onclick="startConn()">Connect</button>
-  <button onclick="stopConn()">Disconnect</button>
+  <button id="connect_button" onclick="startConn()">Connect</button>
+  <button id="disconnect_button" onclick="stopConn()">Disconnect</button>
   <br />
   <div
     style="display:grid; grid-template-columns: 400px; grid-template-rows: 30px 250px 30px; column-gap: 2px; row-gap: 2px;">
@@ -33,8 +33,8 @@
   //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
   // 
 
-  let localStream = null;
-  let pipe = null;
+  //let localStream = null;
+  //let pipe = null;
   let invertSender = false;
   let invertReceiver = false;
   //const localVideo = document.getElementById('local_video');
@@ -46,6 +46,33 @@
     postEncryptFlag();
   }
 
+  function updateUI() {
+    if (isConnected()) {
+      enableElement(document.getElementById('disconnect_button'));
+      disableElement(document.getElementById('connect_button'));
+    }
+    else {
+      disableElement(document.getElementById('disconnect_button'));
+      enableElement(document.getElementById('connect_button'));
+    }
+  }
+
+  function enableElement(element) {
+    element.disabled = false;
+  }
+
+  function disableElement(element) {
+    element.disabled = true;
+  }
+
+  function isConnected() {
+    if (conn?._pc) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
 
   // --- check if supports InsertableStreams ---
   const supportsInsertableStreams =
@@ -104,12 +131,17 @@ conn.options.video.direction = 'recvonly';
 conn.options.audio.direction = 'recvonly';
 conn._pcConfig.encodedInsertableStreams = true;
 const startConn = async () => {
-  await conn.connect(null).catch(e => console.log(e));
+  await conn.connect(null).catch(e => {
+    console.log(e);
+    return;
+  });
   console.log('ayame connected');
+  updateUI();
   
   conn.on('disconnect', (e) => {
     console.log(e);
     encodedStreams = [];
+    updateUI();
   });
   conn.on('addstream', (e) => {
     console.log('addstream', e.stream);
@@ -133,6 +165,9 @@ const stopConn = async () => {
   recvVideo.pause();
   recvVideo.srcObject = null;
 };
+
+// ==== update UI ====
+updateUI();
 
 </script>
 

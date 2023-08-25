@@ -105,6 +105,7 @@
       if(isMediaStarted()) {
         disableElement(document.getElementById('start_video_button'));
         enableElement(document.getElementById('stop_video_button'));
+        disableElement(document.getElementById('use_audio_check'));
         enableElement(document.getElementById('connect_button'));
         disableElement(document.getElementById('disconnect_button'));
       }
@@ -197,12 +198,10 @@ const startConn = async () => {
     return;
   });
   console.log('ayame connected');
-  isAyameConnected = true;
   updateUI();
 
   conn.on('disconnect', (e) => {
     console.log(e);
-    isAyameConnected = false;
     updateUI();
   });
   conn._pc.getSenders().forEach(setupSenderTransform);
