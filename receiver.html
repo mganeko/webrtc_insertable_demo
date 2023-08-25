@@ -84,7 +84,7 @@
 
   // --- worker ---
   const worker = new Worker('./js/worker.js', {name: 'E2EE worker'});
-  let encodedStreams = [];
+  //let encodedStreams = [];
 
   function setupReceiverTransform(receiver) {
     console.log('receiver kind=%s', receiver.track.kind);
@@ -97,12 +97,12 @@
       return;
     }
     else if(supportsInsertableStreams) {
-      if (encodedStreams[receiver.track.kind]) {
-        console.log('receiver.transform already exists');
-        return;
-      }
+      // if (encodedStreams[receiver.track.kind]) {
+      //   console.log('receiver.transform already exists');
+      //   return;
+      // }
       const receiverStreams = receiver.createEncodedStreams();
-      encodedStreams[receiver.track.kind] = receiverStreams;
+      //encodedStreams[receiver.track.kind] = receiverStreams;
       const {readable, writable} = receiverStreams;
       worker.postMessage({
         operation: 'decode',
@@ -140,16 +140,16 @@ const startConn = async () => {
   
   conn.on('disconnect', (e) => {
     console.log(e);
-    encodedStreams = [];
+    //encodedStreams = [];
     updateUI();
   });
   conn.on('addstream', (e) => {
     console.log('addstream', e.stream);
-    conn._pc.getReceivers().forEach(setupReceiverTransform);
-
+    
     //  document.querySelector('#remote-video').srcObject = e.stream;
     if (!recvVideo.srcObject) {
       recvVideo.srcObject = e.stream;
+      conn._pc.getReceivers().forEach(setupReceiverTransform);
       recvVideo.play().catch(err => { console.error('play ERROR', err) });
     }
     else if (recvVideo.srcObject !== e.stream) {
@@ -160,7 +160,7 @@ const startConn = async () => {
 const stopConn = async () => {
   if (!conn) return;
   await conn.disconnect();
-  encodedStreams = [];
+  //encodedStreams = [];
 
   recvVideo.pause();
   recvVideo.srcObject = null;
