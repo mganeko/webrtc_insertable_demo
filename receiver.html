@@ -14,6 +14,8 @@
     Please try with Safari 16, Firefox 117(beta) or later.
   </div>
   <br />
+  RoomID <input type="text" id="room_id_input" value="insertable-test-room"></input>
+  <br />
   <button id="connect_button" onclick="startConn()">Connect</button>
   <button id="disconnect_button" onclick="stopConn()">Disconnect</button>
   <br />
@@ -22,7 +24,7 @@
     <div>Receiver</div>
     <video id="recv_video" width="320" height="240" controls="1" style="border: solid 1px black;">
     </video>
-    <div><input type="checkbox" id="invert_receiver_check" onchange="toggleReceiver()">XOR Receiver data</input></div>
+    <div><input type="checkbox" id="invert_receiver_check" onchange="toggleReceiver()">Receiver XOR Simple Decryption</input></div>
   </div>
 </body>
 <script>
@@ -32,6 +34,8 @@
   //   - https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption
   //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
   // 
+
+  const DEFAULT_ROOM_ID = 'insertable-test-room';
 
   //let localStream = null;
   //let pipe = null;
@@ -46,7 +50,19 @@
     postEncryptFlag();
   }
 
+  function getRoomId() {
+    //return DEFAULT_ROOM_ID;
+    return document.getElementById('room_id_input').value;
+  }
+
   function updateUI() {
+    if (isAyameReady()) {
+      disableElement(document.getElementById('room_id_input'));
+    }
+    else {
+      enableElement(document.getElementById('room_id_input'));
+    }
+    
     if (isConnected()) {
       enableElement(document.getElementById('disconnect_button'));
       disableElement(document.getElementById('connect_button'));
@@ -126,11 +142,25 @@
   }
 
 /* ======== for Ayame Labo ======== */
-const conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', 'mg-test-room');
-conn.options.video.direction = 'recvonly';
-conn.options.audio.direction = 'recvonly';
-conn._pcConfig.encodedInsertableStreams = true;
+let conn = null;
+
+function isAyameReady() {
+  return !!conn;
+}
+
+function prepareAyame() {
+  if (isAyameReady())
+    return;
+
+  conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId());
+  conn.options.video.direction = 'recvonly';
+  conn.options.audio.direction = 'recvonly';
+  conn._pcConfig.encodedInsertableStreams = true;
+}
+
 const startConn = async () => {
+  prepareAyame();
+
   await conn.connect(null).catch(e => {
     console.log(e);
     return;

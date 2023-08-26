@@ -14,6 +14,8 @@
     Please try with Safari 16, Firefox 117(beta) or later.
   </div>
   <br />
+  RoomID <input type="text" id="room_id_input" value="insertable-test-room"></input>
+  <br />
   <input type="checkbox" id="use_audio_check" >use Audio</input>
   <button id="start_video_button" onclick="startVideo()">Start Video</button>
   <button id="stop_video_button" onclick="stopVideo()">Stop Video</button>
@@ -26,7 +28,7 @@
     <div>Sender</div>
     <video id="local_video" width="320" height="240" style="border: solid 1px black;">
     </video>
-    <div><input type="checkbox" id="invert_sender_check" onchange="toggleSender()">XOR Sender data</input></div>
+    <div><input type="checkbox" id="invert_sender_check" onchange="toggleSender()">Sender XOR Simple Encryption</input></div>
   </div>
 </body>
 <script>
@@ -44,6 +46,8 @@
   //    - [ ] add signaling key input
   //    - [ ] add signaling key qeury parameter
   // - [x] update UI
+
+  const DEFAULT_ROOM_ID = 'insertable-test-room';
 
   let localStream = null;
   //let pipe = null;
@@ -94,7 +98,19 @@
     postEncryptFlag();
   }
 
+  function getRoomId() {
+    //return DEFAULT_ROOM_ID;
+    return document.getElementById('room_id_input').value;
+  }
+
   function updateUI() {
+    if (isAyameReady()) {
+      disableElement(document.getElementById('room_id_input'));
+    }
+    else {
+      enableElement(document.getElementById('room_id_input'));
+    }
+
     if (isConnected()) {
       disableElement(document.getElementById('start_video_button'));
       disableElement(document.getElementById('stop_video_button'));
@@ -189,11 +205,24 @@
   }
 
 /* ======== for Ayame Labo ======== */
-const conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', 'mg-test-room');
-conn.options.video.direction = 'sendonly';
-conn.options.audio.direction = 'sendonly';
-conn._pcConfig.encodedInsertableStreams = true;
+let conn = null;
+function isAyameReady() {
+  return !!conn;
+}
+
+function prepareAyame() {
+  if (isAyameReady())
+    return;
+
+  conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId());
+  conn.options.video.direction = 'sendonly';
+  conn.options.audio.direction = 'sendonly';
+  conn._pcConfig.encodedInsertableStreams = true;
+}
+
 const startConn = async () => {
+  prepareAyame();
+
   await conn.connect(localStream).catch(e => {
     console.log(e);
     return;
