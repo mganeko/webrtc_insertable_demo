@@ -9,9 +9,13 @@
 
 <body>
   <div>
-    WebRTC RTCRtpScriptTransforms (<a
-      href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform">draft Spec</a>) Trial.<br />
-    Please try with Safari 16, Firefox 117(beta) or later.
+    Inter operability example between:
+    <ul>
+      <li>WebRTC Insertable Streams for Chrmome m83 or later</li>
+      <li>WebRTC RTCRtpScriptTransforms (<a href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform" target="_blank">draft
+          Spec</a>) for Safari 16, Firefox 117(beta) or later</li>
+    </ul>
+    using <a href="https://ayame-labo.shiguredo.app/" target="_blank">Ayame-labo</a>
   </div>
   <br />
   RoomID <input type="text" id="room_id_input" value="insertable-test-room"></input>
@@ -40,7 +44,7 @@
   // 
   // ToDo
   //  - [ ] add room id
-  //    - [ ] add room id input
+  //    - [x] add room id input
   //    - [ ] add room id qeury parameter
   //  - [ ] add signaling key
   //    - [ ] add signaling key input
