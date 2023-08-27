@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Sender</title>
+  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2022.1.0/dist/ayame.min.js"></script>
+</head>
+
+<body>
+  <div>
+    Inter operability example between:
+    <ul>
+      <li>WebRTC Insertable Streams for Chrmome m83 or later</li>
+      <li>WebRTC RTCRtpScriptTransforms (<a href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform" target="_blank">draft
+          Spec</a>) for Safari 16, Firefox 117(beta) or later</li>
+    </ul>
+    using <a href="https://ayame-labo.shiguredo.app/" target="_blank">Ayame-labo</a>
+  </div>
+  <br />
+  RoomID <input type="text" id="room_id_input" value="insertable-test-room"></input>
+  <br />
+  <input type="checkbox" id="use_audio_check" >use Audio</input>
+  <button id="start_video_button" onclick="startVideo()">Start Video</button>
+  <button id="stop_video_button" onclick="stopVideo()">Stop Video</button>
+  &nbsp;
+  <button id="connect_button" onclick="startConn()">Connect</button>
+  <button id="disconnect_button" onclick="stopConn()">Disconnect</button>
+  <br />
+  <div
+    style="display:grid; grid-template-columns: 400px; grid-template-rows: 30px 250px 30px; column-gap: 2px; row-gap: 2px;">
+    <div>Sender</div>
+    <video id="local_video" width="320" height="240" style="border: solid 1px black;">
+    </video>
+    <div><input type="checkbox" id="invert_sender_check" onchange="toggleSender()">Sender XOR Simple Encryption</input></div>
+  </div>
+</body>
+<script>
+  //
+  // Refer:
+  //   - https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md
+  //   - https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption
+  //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
+  // 
+  // ToDo
+  //  - [x] add room id
+  //    - [x] add room id input
+  //    - [x] add room id qeury parameter (?room=xxxx)
+  //  - [ ] add signaling key
+  //    - [ ] add signaling key input
+  //    - [ ] add signaling key qeury parameter
+  // - [x] update UI
+
+  const DEFAULT_ROOM_ID = 'insertable-test-room';
+
+  let localStream = null;
+  //let pipe = null;
+  let invertSender = false;
+  let invertReceiver = false;
+  const localVideo = document.getElementById('local_video');
+  
+  function startVideo() {
+    console.log('startVideo()');
+    const useAudio = getUseAudio();
+
+    //const constraints = { video: true, audio: useAudio };
+    //const constraints = { video: { width: 1280, height: 720 }, audio: useAudio };
+    const constraints = { video: { width: 640, height: 480 }, audio: useAudio };
+    console.log('getUserMedia constraints:', constraints);
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        localStream = stream;
+        localVideo.srcObject = stream;
+        localVideo.muted = true;
+        localVideo.play().catch(err => console.error('video play ERROR:', err));
+        updateUI();
+      })
+      .catch(err => {
+        console.error('getUserMedia ERROR:', err);
+      });
+  }
+
+  function stopVideo() {
+    if (localVideo.srcObject) {
+      localVideo.srcObject.getTracks().forEach(track => track.stop());
+      localVideo.pause();
+      localVideo.srcObject = null;
+    }
+
+    localStream = null;
+    updateUI();
+  }
+
+  function getUseAudio() {
+    return document.getElementById('use_audio_check').checked;
+  }
+
+  function toggleSender() {
+    invertSender = document.getElementById('invert_sender_check').checked;
+    console.log('invertSender=', invertSender);
+    postEncryptFlag();
+  }
+
+  function getRoomId() {
+    //return DEFAULT_ROOM_ID;
+    return document.getElementById('room_id_input').value;
+  }
+
+  function updateUI() {
+    if (isAyameReady()) {
+      disableElement(document.getElementById('room_id_input'));
+    }
+    else {
+      enableElement(document.getElementById('room_id_input'));
+    }
+
+    if (isConnected()) {
+      disableElement(document.getElementById('start_video_button'));
+      disableElement(document.getElementById('stop_video_button'));
+      disableElement(document.getElementById('use_audio_check'));
+      disableElement(document.getElementById('connect_button'));
+      enableElement(document.getElementById('disconnect_button'));
+    }
+    else {
+      if(isMediaStarted()) {
+        disableElement(document.getElementById('start_video_button'));
+        enableElement(document.getElementById('stop_video_button'));
+        disableElement(document.getElementById('use_audio_check'));
+        enableElement(document.getElementById('connect_button'));
+        disableElement(document.getElementById('disconnect_button'));
+      }
+      else {
+        enableElement(document.getElementById('start_video_button'));
+        disableElement(document.getElementById('stop_video_button'));
+        enableElement(document.getElementById('use_audio_check'));
+        disableElement(document.getElementById('connect_button'));
+        disableElement(document.getElementById('disconnect_button'));
+      }
+    }
+  }
+
+  function enableElement(element) {
+    element.disabled = false;
+  }
+
+  function disableElement(element) {
+    element.disabled = true;
+  }
+
+  function isConnected() {
+    if (conn?._pc) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  function isMediaStarted() {
+    if (localStream) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  // ---- URL ----
+  function getRoomFromUrl() {
+    const search = window.location.search;
+    const re = new RegExp('room=([^&=]+)');
+    const results = re.exec(search);
+    let room = '';
+    if (results) {
+      room = results[1];
+    }
+    return room;
+  }
+
+  function setupRoomFromUrl() {
+    const room = getRoomFromUrl();
+    if (room && room.length > 0) {
+      document.getElementById('room_id_input').value = room;
+    }
+  }
+
+  // --- check if supports InsertableStreams ---
+  const supportsInsertableStreams =
+    !!RTCRtpSender.prototype.createEncodedStreams;
+  console.log('supportsInsertableStreams=', supportsInsertableStreams);
+  const supportsScriptTransform =
+    !!window.RTCRtpScriptTransform;
+  console.log('supportsScriptTransform=', supportsScriptTransform);
+
+  // --- worker ---
+  const worker = new Worker('./js/worker.js', {name: 'E2EE worker'});
+
+  function setupSenderTransform(sender) {
+    console.log('sender kind=%s', sender.track?.kind);
+    if (window.RTCRtpScriptTransform) {
+      sender.transform = new RTCRtpScriptTransform(worker, {operation: 'encode'});
+      return;
+    }
+    else if(supportsInsertableStreams) {
+      const senderStreams = sender.createEncodedStreams();
+      const {readable, writable} = senderStreams;
+      worker.postMessage({
+        operation: 'encode',
+        readable,
+        writable,
+      }, [readable, writable]);
+    }
+    else {
+      console.error('ERROR: NOT support RTCRtpScriptTransform');
+      throw new Error('NOT support RTCRtpScriptTransform');
+    }
+  }
+
+  // encript on/off
+  function postEncryptFlag() {
+    worker.postMessage({
+      operation: 'setEncript',
+      encriptSender: invertSender,
+      encriptReceiver: invertReceiver,
+    });
+  }
+
+/* ======== for Ayame Labo ======== */
+let conn = null;
+function isAyameReady() {
+  return !!conn;
+}
+
+function prepareAyame() {
+  if (isAyameReady())
+    return;
+
+  conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId());
+  conn.options.video.direction = 'sendonly';
+  conn.options.audio.direction = 'sendonly';
+  conn._pcConfig.encodedInsertableStreams = true;
+}
+
+const startConn = async () => {
+  prepareAyame();
+
+  await conn.connect(localStream).catch(e => {
+    console.log(e);
+    return;
+  });
+  console.log('ayame connected');
+  updateUI();
+
+  conn.on('disconnect', (e) => {
+    console.log(e);
+    updateUI();
+  });
+  conn._pc.getSenders().forEach(setupSenderTransform);
+};
+const stopConn = async () => {
+  if (!conn) return;
+  await conn.disconnect();
+  updateUI();
+};
+
+// ==== update UI ====
+setupRoomFromUrl()
+updateUI();
+
+</script>
+
+</html>

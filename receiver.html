@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Receiver</title>
+  <script src="https://unpkg.com/@open-ayame/ayame-web-sdk@2022.1.0/dist/ayame.min.js"></script>
+</head>
+
+<body>
+  <div>
+    Inter operability example between:
+    <ul>
+      <li>WebRTC Insertable Streams for Chrmome m83 or later</li>
+      <li>WebRTC RTCRtpScriptTransforms (<a href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform" target="_blank">draft
+          Spec</a>) for Safari 16, Firefox 117(beta) or later</li>
+    </ul>
+    using <a href="https://ayame-labo.shiguredo.app/" target="_blank">Ayame-labo</a>
+  </div>
+  <br />
+  RoomID <input type="text" id="room_id_input" value="insertable-test-room"></input>
+  <br />
+  <button id="connect_button" onclick="startConn()">Connect</button>
+  <button id="disconnect_button" onclick="stopConn()">Disconnect</button>
+  <br />
+  <div
+    style="display:grid; grid-template-columns: 400px; grid-template-rows: 30px 250px 30px; column-gap: 2px; row-gap: 2px;">
+    <div>Receiver</div>
+    <video id="recv_video" width="320" height="240" controls="1" style="border: solid 1px black;">
+    </video>
+    <div><input type="checkbox" id="invert_receiver_check" onchange="toggleReceiver()">Receiver XOR Simple Decryption</input></div>
+  </div>
+</body>
+<script>
+  //
+  // Refer:
+  //   - https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md
+  //   - https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption
+  //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
+  // 
+
+  const DEFAULT_ROOM_ID = 'insertable-test-room';
+
+  //let localStream = null;
+  //let pipe = null;
+  let invertSender = false;
+  let invertReceiver = false;
+  //const localVideo = document.getElementById('local_video');
+  const recvVideo = document.getElementById('recv_video');
+
+  function toggleReceiver() {
+    invertReceiver = document.getElementById('invert_receiver_check').checked;
+    console.log('invertReceiver=', invertReceiver);
+    postEncryptFlag();
+  }
+
+  function getRoomId() {
+    //return DEFAULT_ROOM_ID;
+    return document.getElementById('room_id_input').value;
+  }
+
+  function updateUI() {
+    if (isAyameReady()) {
+      disableElement(document.getElementById('room_id_input'));
+    }
+    else {
+      enableElement(document.getElementById('room_id_input'));
+    }
+
+    if (isConnected()) {
+      enableElement(document.getElementById('disconnect_button'));
+      disableElement(document.getElementById('connect_button'));
+    }
+    else {
+      disableElement(document.getElementById('disconnect_button'));
+      enableElement(document.getElementById('connect_button'));
+    }
+  }
+
+  function enableElement(element) {
+    element.disabled = false;
+  }
+
+  function disableElement(element) {
+    element.disabled = true;
+  }
+
+  function isConnected() {
+    if (conn?._pc) {
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  // ---- URL ----
+  function getRoomFromUrl() {
+    const search = window.location.search;
+    const re = new RegExp('room=([^&=]+)');
+    const results = re.exec(search);
+    let room = '';
+    if (results) {
+      room = results[1];
+    }
+    return room;
+  }
+
+  function setupRoomFromUrl() {
+    const room = getRoomFromUrl();
+    if (room && room.length > 0) {
+      document.getElementById('room_id_input').value = room;
+    }
+  }
+
+  // --- check if supports InsertableStreams ---
+  const supportsInsertableStreams =
+    !!RTCRtpSender.prototype.createEncodedStreams;
+  console.log('supportsInsertableStreams=', supportsInsertableStreams);
+  const supportsScriptTransform =
+    !!window.RTCRtpScriptTransform;
+  console.log('supportsScriptTransform=', supportsScriptTransform);
+
+  // --- worker ---
+  const worker = new Worker('./js/worker.js', {name: 'E2EE worker'});
+  //let encodedStreams = [];
+
+  function setupReceiverTransform(receiver) {
+    console.log('receiver kind=%s', receiver.track.kind);
+    if (window.RTCRtpScriptTransform) {
+      if (receiver.transform) {
+        console.log('receiver.transform already exists');
+        return;
+      }
+      receiver.transform = new RTCRtpScriptTransform(worker, {operation: 'decode'});
+      return;
+    }
+    else if(supportsInsertableStreams) {
+      // if (encodedStreams[receiver.track.kind]) {
+      //   console.log('receiver.transform already exists');
+      //   return;
+      // }
+      const receiverStreams = receiver.createEncodedStreams();
+      //encodedStreams[receiver.track.kind] = receiverStreams;
+      const {readable, writable} = receiverStreams;
+      worker.postMessage({
+        operation: 'decode',
+        readable,
+        writable,
+      }, [readable, writable]);
+    }
+    else {
+      console.error('ERROR: NOT support RTCRtpScriptTransform');
+      throw new Error('NOT support RTCRtpScriptTransform');
+    }
+  }
+
+  // encript on/off
+  function postEncryptFlag() {
+    worker.postMessage({
+      operation: 'setEncript',
+      encriptSender: invertSender,
+      encriptReceiver: invertReceiver,
+    });
+  }
+
+/* ======== for Ayame Labo ======== */
+let conn = null;
+
+function isAyameReady() {
+  return !!conn;
+}
+
+function prepareAyame() {
+  if (isAyameReady())
+    return;
+
+  conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId());
+  conn.options.video.direction = 'recvonly';
+  conn.options.audio.direction = 'recvonly';
+  conn._pcConfig.encodedInsertableStreams = true;
+}
+
+const startConn = async () => {
+  prepareAyame();
+
+  await conn.connect(null).catch(e => {
+    console.log(e);
+    return;
+  });
+  console.log('ayame connected');
+  updateUI();
+  
+  conn.on('disconnect', (e) => {
+    console.log(e);
+    //encodedStreams = [];
+    updateUI();
+  });
+  conn.on('addstream', (e) => {
+    console.log('addstream', e.stream);
+    
+    //  document.querySelector('#remote-video').srcObject = e.stream;
+    if (!recvVideo.srcObject) {
+      recvVideo.srcObject = e.stream;
+      conn._pc.getReceivers().forEach(setupReceiverTransform);
+      recvVideo.play().catch(err => { console.error('play ERROR', err) });
+    }
+    else if (recvVideo.srcObject !== e.stream) {
+      recvVideo.srcObject = e.stream;
+    }
+  });
+};
+const stopConn = async () => {
+  if (!conn) return;
+  await conn.disconnect();
+  //encodedStreams = [];
+
+  recvVideo.pause();
+  recvVideo.srcObject = null;
+};
+
+// ==== update UI ====
+setupRoomFromUrl();
+updateUI();
+
+</script>
+
+</html>
