@@ -9,6 +9,7 @@
 
 <body>
   <div>
+    Inter operability example between:
     <ul>
       <li>WebRTC Insertable Streams for Chrmome m83 or later</li>
       <li>WebRTC RTCRtpScriptTransforms (<a href="https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform" target="_blank">draft
@@ -90,6 +91,25 @@
     }
     else {
       return false;
+    }
+  }
+
+  // ---- URL ----
+  function getRoomFromUrl() {
+    const search = window.location.search;
+    const re = new RegExp('room=([^&=]+)');
+    const results = re.exec(search);
+    let room = '';
+    if (results) {
+      room = results[1];
+    }
+    return room;
+  }
+
+  function setupRoomFromUrl() {
+    const room = getRoomFromUrl();
+    if (room && room.length > 0) {
+      document.getElementById('room_id_input').value = room;
     }
   }
 
@@ -200,6 +220,7 @@ const stopConn = async () => {
 };
 
 // ==== update UI ====
+setupRoomFromUrl();
 updateUI();
 
 </script>

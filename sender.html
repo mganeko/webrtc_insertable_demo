@@ -43,9 +43,9 @@
   //   - https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/worker.js
   // 
   // ToDo
-  //  - [ ] add room id
+  //  - [x] add room id
   //    - [x] add room id input
-  //    - [ ] add room id qeury parameter
+  //    - [x] add room id qeury parameter (?room=xxxx)
   //  - [ ] add signaling key
   //    - [ ] add signaling key input
   //    - [ ] add signaling key qeury parameter
@@ -166,6 +166,24 @@
     }
   }
 
+  // ---- URL ----
+  function getRoomFromUrl() {
+    const search = window.location.search;
+    const re = new RegExp('room=([^&=]+)');
+    const results = re.exec(search);
+    let room = '';
+    if (results) {
+      room = results[1];
+    }
+    return room;
+  }
+
+  function setupRoomFromUrl() {
+    const room = getRoomFromUrl();
+    if (room && room.length > 0) {
+      document.getElementById('room_id_input').value = room;
+    }
+  }
 
   // --- check if supports InsertableStreams ---
   const supportsInsertableStreams =
@@ -247,6 +265,7 @@ const stopConn = async () => {
 };
 
 // ==== update UI ====
+setupRoomFromUrl()
 updateUI();
 
 </script>
