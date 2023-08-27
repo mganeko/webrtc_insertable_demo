@@ -92,7 +92,11 @@ Refering:
   - H.264のkeyフレームでは、先頭38バイトは加工しないで送らないと、正常にデコードできなかった（仕様未確認）
 
 
+# ToDo
 
+- [ ] index.html --> rename to insertable_stream.html
+- [ ] index.html --> top page, link to each example
+- [ ] update README.md, with description of each example
 
 
 
