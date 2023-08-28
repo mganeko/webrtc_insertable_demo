@@ -11,7 +11,9 @@ Refering:
 
 参考にしたもの:
 - 説明 ... https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md
-- サンプル ... WebRTC/Samples - [endtoend-encryption](https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption) (BSD 3-Clause LICENSE)
+- サンプル ...
+  - WebRTC/Samples - [endtoend-encryption](https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption) (BSD 3-Clause LICENSE)
+  - https://github.com/webrtc/samples/tree/gh-pages/src/content/insertable-streams/endtoend-encryption ( BSD-3-Clause license)
 - RTCRtpScriptTransforms の仕様 - https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform
 
 ## LICENSE / ライセンス
@@ -33,7 +35,7 @@ Refering:
 ## GitHub Pages で実行
 
 ### Insertable Streams
-- Chrome m115以上で、https://mganeko.github.io/webrtc_insertable_demo/ にアクセス
+- Chrome m86以上で、https://mganeko.github.io/webrtc_insertable_demo/insertable_stream.html にアクセス
 - [Start Video]ボタンをクリックし、カメラから映像を取得
   - 左に映像が表示される
   - [use Audio]がチェックされていると、マイクの音声も取得
@@ -94,9 +96,10 @@ Refering:
 
 # ToDo
 
-- [ ] index.html --> rename to insertable_stream.html
+- [x] index.html --> rename to insertable_stream.html
 - [ ] index.html --> top page, link to each example
 - [ ] update README.md, with description of each example
+- [ ] update licencs (sample, sdk)
 
 
 
