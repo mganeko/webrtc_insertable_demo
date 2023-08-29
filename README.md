@@ -97,8 +97,14 @@ Refering:
 # ToDo
 
 - [x] index.html --> rename to insertable_stream.html
-- [ ] index.html --> top page, link to each example
+- [x] index.html --> top page, link to each example
+  - [x] Chrome Insertable_stream
+  - [x] Safari/Firefox RTCRtpScriptTransforms
+  - [x] Sender / Receiver over Ayame-labo, for inter operability between Chrome and Safari/Firefox
 - [ ] update README.md, with description of each example
+  - [ ] Chrome Insertable_stream
+  - [ ] Safari/Firefox RTCRtpScriptTransforms
+  - [ ] Sender / Receiver over Ayame-labo, for inter operability between Chrome and Safari/Firefox
 - [ ] update licencs (sample, sdk)
 
 
