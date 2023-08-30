@@ -6,6 +6,7 @@ Refering:
 - https://github.com/alvestrand/webrtc-media-streams/blob/master/explainer.md
 - WebRTC/Samples - [endtoend-encryption](https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption) (BSD 3-Clause LICENSE)
 - RTCRtpScriptTransforms Spec - https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform
+  - explainer - https://github.com/w3c/webrtc-encoded-transform/blob/main/explainer.md
 
 これは WebRTC Insertable Streams と RTCRtpScriptTransforms のお試しデモです。
 
@@ -15,11 +16,13 @@ Refering:
   - WebRTC/Samples - [endtoend-encryption](https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/endtoend-encryption) (BSD 3-Clause LICENSE)
   - https://github.com/webrtc/samples/tree/gh-pages/src/content/insertable-streams/endtoend-encryption ( BSD-3-Clause license)
 - RTCRtpScriptTransforms の仕様 - https://www.w3.org/TR/webrtc-encoded-transform/#scriptTransform
+  - explainer - https://github.com/w3c/webrtc-encoded-transform/blob/main/explainer.md
 
 ## LICENSE / ライセンス
 
 - DEMO ... MIT LICENSE / MITライセンス
 - [videopipes.js](https://github.com/webrtc/samples/blob/gh-pages/src/content/peerconnection/endtoend-encryption/js/videopipe.js) (from [webrtc/samples](https://github.com/webrtc/samples)) ... BSD 3-Clause LICENSE
+- [ayame-web-sdk](https://github.com/OpenAyame/ayame-web-sdk) ... Apache-2.0 license
 
 
 # 利用方法
@@ -30,7 +33,7 @@ Refering:
   - Chrome m115 では、フラグなしで利用可能
 - RTCRtpScriptTransforms
   - Safari 16.x で利用可能
-  - Firefox 117以降で利用可能（現在はβ版）
+  - Firefox 117以降で利用可能
 
 ## GitHub Pages で実行
 
