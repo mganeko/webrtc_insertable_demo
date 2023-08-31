@@ -1,4 +1,4 @@
-# WebRTC Insertable Streams DEMO
+# WebRTC Insertable Streams / RTCRtpScriptTransforms DEMO
 
 This Repo is trial of WebRTC Insertable Streams and RTCRtpScriptTransforms
 
@@ -69,6 +69,30 @@ Refering:
   - 右の[XOR Receiver data]をチェックすると、受信側でストリームのデータを逆加工
   - どちらも加工しない、あるいは加工する場合のみ、正常に右の映像が表示できる
   - ※映像の乱れや回復が反映されるまで、時間がかかることがあります
+
+## Inter Operability between Insertable Streams and RTCRtpScriptTransforms
+- ChromeのInsertable Streamsと、Safari/FirefoxのRTCRtpScriptTransformsの相互通信
+- シグナリングにAyame-Laboを利用
+- 送信側
+  - ブラウザで https://mganeko.github.io/webrtc_insertable_demo/sender.html にアクセス
+  - RoomID を指定
+  - [Start Video]ボタンをクリックし、カメラから映像を取得
+    - 映像が表示される
+    - [use Audio]がチェックされていると、マイクの音声も取得
+  - [Connect]ボタンをクリック
+    - Ayame-Laboに接続、シグナリング待ち
+- 受信側
+  - ブラウザで https://mganeko.github.io/webrtc_insertable_demo/receiver.html にアクセス
+  - RoomID を指定
+  - [Connect]ボタンをクリック
+    - Ayame-Laboに接続、シグナリング開始
+  - P2P通信が確立し、受信した映像が表示される
+- ストリームデータの加工
+  - 送信側の[Sender XOR Simple Encryption]をチェックすると、送信側でストリームのデータを加工
+  - 受信側の[Receiver XOR Simple Decryption]をチェックすると、受信側でストリームのデータを逆加工
+  - どちらも加工しない、あるいは加工する場合のみ、正常に受信映像が表示できる
+
+
 
 # メモ
 
