@@ -128,11 +128,11 @@ Refering:
   - [x] Chrome Insertable_stream
   - [x] Safari/Firefox RTCRtpScriptTransforms
   - [x] Sender / Receiver over Ayame-labo, for inter operability between Chrome and Safari/Firefox
-- [ ] update README.md, with description of each example
-  - [ ] Chrome Insertable_stream
-  - [ ] Safari/Firefox RTCRtpScriptTransforms
-  - [ ] Sender / Receiver over Ayame-labo, for inter operability between Chrome and Safari/Firefox
-- [ ] update licencs (sample, sdk)
+- [x] update README.md, with description of each example
+  - [x] Chrome Insertable_stream
+  - [x] Safari/Firefox RTCRtpScriptTransforms
+  - [x] Sender / Receiver over Ayame-labo, for inter operability between Chrome and Safari/Firefox
+- [x] update licencs (sample, sdk)
 
 
 
