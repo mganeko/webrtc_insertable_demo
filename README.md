@@ -72,7 +72,7 @@ Refering:
 
 ## Inter Operability between Insertable Streams and RTCRtpScriptTransforms
 - ChromeのInsertable Streamsと、Safari/FirefoxのRTCRtpScriptTransformsの相互通信
-- シグナリングにAyame-Laboを利用
+- シグナリングに[Ayame-Labo](https://ayame-labo.shiguredo.app)を利用
 - 送信側
   - ブラウザで https://mganeko.github.io/webrtc_insertable_demo/sender.html にアクセス
   - RoomID を指定
@@ -92,7 +92,7 @@ Refering:
   - 受信側の[Receiver XOR Simple Decryption]をチェックすると、受信側でストリームのデータを逆加工
   - どちらも加工しない、あるいは加工する場合のみ、正常に受信映像が表示できる
 
-
+![接続後のXOR切り替え2](img/script_transform_demo.gif "接続後のXOR切り替え2")
 
 # メモ
 
