@@ -70,6 +70,8 @@ Refering:
   - どちらも加工しない、あるいは加工する場合のみ、正常に右の映像が表示できる
   - ※映像の乱れや回復が反映されるまで、時間がかかることがあります
 
+![接続後のXOR切り替え2](img/script_transform_demo.gif "接続後のXOR切り替え2")
+
 ## Inter Operability between Insertable Streams and RTCRtpScriptTransforms
 - ChromeのInsertable Streamsと、Safari/FirefoxのRTCRtpScriptTransformsの相互通信
 - シグナリングに[Ayame-Labo](https://ayame-labo.shiguredo.app)を利用
@@ -92,7 +94,10 @@ Refering:
   - 受信側の[Receiver XOR Simple Decryption]をチェックすると、受信側でストリームのデータを逆加工
   - どちらも加工しない、あるいは加工する場合のみ、正常に受信映像が表示できる
 
-![接続後のXOR切り替え2](img/script_transform_demo.gif "接続後のXOR切り替え2")
+Sender:Safari → Reciever:Chrome の例
+
+![Safari-ChromeのXOR切り替え](img/sender-receiver_trim.gif "Safari-ChromeのXOR切り替え")
+
 
 # メモ
 
