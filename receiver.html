@@ -204,11 +204,12 @@ function prepareAyame() {
   if (signalingKey && signalingKey.length > 0) {
     options.signalingKey = signalingKey;
   }
-  options.encodedInsertableStreams = true;
+  //options.encodedInsertableStreams = true;
 
   conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId(), options);
   conn.options.video.direction = 'recvonly';
   conn.options.audio.direction = 'recvonly';
+  conn._pcConfig.encodedInsertableStreams = true;
 }
 
 const startConn = async () => {
