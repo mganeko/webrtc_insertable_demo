@@ -18,6 +18,8 @@
     using <a href="https://ayame-labo.shiguredo.app/" target="_blank">Ayame-labo</a>
   </div>
   <br />
+  SignalingKey <input type="text" id="signaling_key_input" value=""></input>
+  <br />
   RoomID <input type="text" id="room_id_input" value="insertable-test-room"></input>
   <br />
   <button id="connect_button" onclick="startConn()">Connect</button>
@@ -54,6 +56,10 @@
     postEncryptFlag();
   }
 
+  function getSignalingKey() {
+    return document.getElementById('signaling_key_input').value;
+  }
+
   function getRoomId() {
     //return DEFAULT_ROOM_ID;
     return document.getElementById('room_id_input').value;
@@ -61,9 +67,11 @@
 
   function updateUI() {
     if (isAyameReady()) {
+      disableElement(document.getElementById('signaling_key_input'));
       disableElement(document.getElementById('room_id_input'));
     }
     else {
+      enableElement(document.getElementById('signaling_key_input'));
       enableElement(document.getElementById('room_id_input'));
     }
 
@@ -95,6 +103,17 @@
   }
 
   // ---- URL ----
+  function getSignalingKeyFromUrl() {
+    const search = window.location.search;
+    const re = new RegExp('key=([^&=]+)');
+    const results = re.exec(search);
+    let key = '';
+    if (results) {
+      key = results[1];
+    }
+    return key;
+  }
+
   function getRoomFromUrl() {
     const search = window.location.search;
     const re = new RegExp('room=([^&=]+)');
@@ -106,7 +125,12 @@
     return room;
   }
 
-  function setupRoomFromUrl() {
+  function setupInfoFromUrl() {
+    const key = getSignalingKeyFromUrl();
+    if (key && key.length > 0) {
+      document.getElementById('signaling_key_input').value = key;
+    }
+
     const room = getRoomFromUrl();
     if (room && room.length > 0) {
       document.getElementById('room_id_input').value = room;
@@ -175,7 +199,13 @@ function prepareAyame() {
   if (isAyameReady())
     return;
 
-  conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId());
+  const signalingKey = getSignalingKey();
+  const options = Ayame.defaultOptions;
+  if (signalingKey && signalingKey.length > 0) {
+    options.signalingKey = signalingKey;
+  }
+
+  conn = Ayame.connection('wss://ayame-labo.shiguredo.app/signaling', getRoomId(), options);
   conn.options.video.direction = 'recvonly';
   conn.options.audio.direction = 'recvonly';
   conn._pcConfig.encodedInsertableStreams = true;
@@ -220,7 +250,7 @@ const stopConn = async () => {
 };
 
 // ==== update UI ====
-setupRoomFromUrl();
+setupInfoFromUrl();
 updateUI();
 
 </script>
